@@ -1,6 +1,7 @@
-import requests
-import openpyxl as xl
 from time import sleep
+
+import requests
+import pyexcel as xl
 
 
 API_KEY = << << Enter your API key here >> >>
@@ -10,7 +11,7 @@ def setup_excel(workbook):
     """
     Setup sheets for the newly created excel file.
     """
-    sheet1 = workbook.sheet1
+    sheet1 = workbook.active
     sheet1.title = 'Sheet 1'
     sheet1['A1'] = 'City'
     sheet1['B1'] = 'Temperature'
@@ -20,25 +21,33 @@ def setup_excel(workbook):
     sheet2['A1'] = 'City'
 
 
+def save_workbook(workbook, file_name='weather.xlsx'):
+    """
+    Saves workbook progress to excel file.
+    """
+    workbook.save_as(file_name)
+
+
 def open_excel(file_name='weather.xlsx'):
     """
     Either opens an existing file or creates a new file and returns its
     workbook reference.
     """
     try:
-        wb = xl.load_workbook(file_name)
+        wb = xl.get_book(file_name=file_name)
     except FileNotFoundError:
-        wb = xl.Workbook()
+        wb = xl.Book()
         setup_excel(wb)
         save_workbook(wb)
     return wb
 
 
-def save_workbook(workbook, file_name='weather.xlsx'):
+def get_cities(workbook):
     """
-    Saves workbook progress to excel file.
+    It returns the list of rows from top row to the row above the blank row.
     """
-    workbook.save(file_name)
+    sheet1 = workbook['Sheet 1']
+    return sheet1.rows()
 
 
 def get_temperature(city):
@@ -55,33 +64,25 @@ def get_temperature(city):
     return temperature
 
 
-def write_temperature(workbook, city, temp):
-    """
-    Writes updated value of temperature to workbook and excel file.
-    """
-    ws = workbook['Sheet 1']
-    for row in ws.iter_rows():
-        if row[0].value == city:
-            row[1].value = temp
-            break
-    else:
-        ws.append([city, temp, 'C', 1])
-    save_workbook(workbook)
-
-
-def get_cities(workbook):
-    """
-    It returns the list of rows from top row to the row above the blank row.
-    """
-    sheet1 = workbook['Sheet 1']
-    return sheet1.iter_rows()
-
-
 def celsius_to_fahrenheit(temperature):
     """
     Converts temperature value from celsius to fahrenheit.
     """
     return (temperature*9/5) + 32
+
+
+def write_temperature(workbook, city, temp):
+    """
+    Writes updated value of temperature to workbook and excel file.
+    """
+    ws = workbook['Sheet 1']
+    for row in ws.rows():
+        if row[0] == city:
+            row[1] = temp
+            break
+    else:
+        sheet.row += [city, temp, 'C', 1]
+    save_workbook(workbook)
 
 
 def main():
@@ -95,11 +96,11 @@ def main():
     workbook = open_excel()
     while(True):
         for city_row in get_cities(workbook):
-            if city_row[3].value == 1:
-                temperature = get_temperature(city_row[0].value)
-                if city_row[2].value == 'F':
+            if city_row[3] == 1:
+                temperature = get_temperature(city_row[0])
+                if city_row[2] == 'F':
                     temperature = celsius_to_fahrenheit(temperature)
-                write_temperature(workbook, city_row[0].value, temperature)
+                write_temperature(workbook, city_row[0], temperature)
         print('done')
         sleep(5)
 
